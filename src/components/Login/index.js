@@ -5,7 +5,6 @@ import {SignInWithPopup} from "../../firebase/config";
 import {FacebookOutlined, GoogleOutlined} from "@ant-design/icons";
 
 function Login() {
-    const handleFbLogin = () => SignInWithPopup()
 
     return (
         <div>
@@ -15,7 +14,7 @@ function Login() {
                     <Button style={{width: '100%', marginBottom: 5}}>
                         Đăng nhập bằng Google <GoogleOutlined />
                     </Button>
-                    <Button style={{width: '100%'}} onClick={handleFbLogin}>
+                    <Button style={{width: '100%'}} onClick={SignInWithPopup}>
                         Đăng nhập bằng Facebook <FacebookOutlined />
                     </Button>
                 </Col>
