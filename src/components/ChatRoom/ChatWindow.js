@@ -1,14 +1,18 @@
-import React from 'react'
+import React, {useContext, useMemo, useState} from 'react'
 import styled from "styled-components";
-import {Avatar, Button, Form, Input, Tooltip} from "antd";
+import {Alert, Avatar, Button, Form, Input, Tooltip} from "antd";
 import {UserAddOutlined} from "@ant-design/icons";
 import Message from "./Massage";
+import {AppContext} from "../Context/AppProvider";
+import {addDocument} from "../../firebase/services";
+import {AuthContext} from "../Context/AuthProvider";
+import {useFirestore} from "../../hooks/useFirestore";
 
 const WrapperStyled = styled.div`
   //height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
 `
 
 
@@ -45,8 +49,9 @@ const ContentStyled = styled.div`
   height: calc(100% - 56px);
   display: flex;
   flex-direction: column;
-  padding: 0 11px;
   justify-content: flex-end;
+  margin-bottom: 50px;
+  background: wheat;
 `
 
 const FormStyled = styled(Form)`
@@ -54,9 +59,8 @@ const FormStyled = styled(Form)`
   justify-content: space-between;
   align-items: center;
   padding: 2px 2px 2px 0;
-  border-bottom: 1px solid rgb(230, 230, 230);
+  border: 1px solid rgb(205 205 205);
   border-radius: 2px;
-  
   .ant-form-item{
     flex: 1;
     margin-bottom: 0;
@@ -64,52 +68,77 @@ const FormStyled = styled(Form)`
 `
 
 const MessageListStyled = styled.div`
-  max-height: 100%;
+  padding: 5px 80px 5px 30px;
+  max-height: 800px;
   overflow: auto;
 `
 
-function ChatWindow() {
+function ChatWindow(factory, deps) {
+    const { selectedRoom, members, setIsInviteMemberVisible } = useContext(AppContext)
+    const {user: {uid, photoURL, displayName }} = useContext(AuthContext)
+    const [inputValue, setInputValue] = useState('')
+    const [form] = Form.useForm()
+    const handleInputChange = (e) => {
+        setInputValue(e.target.value)
+    }
+
+    const handleOnSubmit = async () => {
+        await addDocument('messages', {
+            text: inputValue,
+            uid,
+            photoURL,
+            roomId: selectedRoom.id,
+            displayName
+        })
+        form.resetFields(['messages'])
+    }
+
+    const condition = useMemo(() => ({
+        fieldName: 'roomId',
+        operator: '==',
+        compareValue: selectedRoom?.id
+
+    }), [selectedRoom?.id])
+    const message = useFirestore('messages',condition)
+
     return (
-        <WrapperStyled>
-            <HeaderStyled>
-                <div className="header__info">
-                    <p className="header__title">Room 1</p>
-                    <span className="header__description">Đây là room 1</span>
-                </div>
-                <ButtonGroupStyled>
-                    <Button type="text" icon={<UserAddOutlined/>}>Mời</Button>
-                    <Avatar.Group size='small' maxCount={2}>
-                        <Tooltip title="A">
-                            <Avatar>A</Avatar>
-                        </Tooltip>
-                        <Tooltip title="B">
-                            <Avatar>B</Avatar>
-                        </Tooltip>
-                        <Tooltip title="C">
-                            <Avatar>C</Avatar>
-                        </Tooltip>
-                        <Tooltip title="D">
-                            <Avatar>D</Avatar>
-                        </Tooltip>
-                    </Avatar.Group>
-                </ButtonGroupStyled>
-            </HeaderStyled>
-            <ContentStyled>
-                <MessageListStyled>
-                    <Message text="Test" photoURL={null} displayName="Chun" createdAt={34231412351245123512}/>
-                    <Message text="Test" photoURL={null} displayName="Chun" createdAt={34231412351245123512}/>
-                    <Message text="Test" photoURL={null} displayName="Chun" createdAt={34231412351245123512}/>
-                    <Message text="Test" photoURL={null} displayName="Chun" createdAt={34231412351245123512}/>
-                    <Message text="Test" photoURL={null} displayName="Chun" createdAt={34231412351245123512}/>
-                </MessageListStyled>
-                <FormStyled>
-                    <Form.Item>
-                        <Input placeholder="Nhập tin nhắn..." bordered={false} autoComplete='off'/>
-                    </Form.Item>
-                    <Button>Gửi</Button>
-                </FormStyled>
-            </ContentStyled>
-        </WrapperStyled>
+            <WrapperStyled>
+                {
+                    selectedRoom?.id ? (
+                        <>
+                            <HeaderStyled>
+                                <div className="header__info">
+                                    <p className="header__title">{selectedRoom?.name}</p>
+                                    <span className="header__description">{selectedRoom?.description}</span>
+                                </div>
+                                <ButtonGroupStyled>
+                                    <Button type="text" icon={<UserAddOutlined/>} onClick={() => setIsInviteMemberVisible(true)}>Mời</Button>
+                                    <Avatar.Group size='small' maxCount={2}>
+                                        {
+                                            members.map(member => <Tooltip title={member.displayName} key={member.id}><Avatar src={member.photoURL}>{member.photoURL ? '' : member.displayName.charAt(0)?.toUpperCase()}</Avatar></Tooltip>)
+                                        }
+                                    </Avatar.Group>
+                                </ButtonGroupStyled>
+                            </HeaderStyled>
+                            <ContentStyled>
+                                <MessageListStyled>
+                                    {
+                                        message.map(mes => (
+                                            <Message text={mes.text} photoURL={mes.photoURL} displayName={mes.displayName} createdAt={mes.createdAt} key={mes.id} isUserSend={uid === mes.uid}/>
+                                        ))
+                                    }
+                                </MessageListStyled>
+                                <FormStyled form={form}>
+                                    <Form.Item name={'messages'}>
+                                        <Input onChange={handleInputChange} onPressEnter={handleOnSubmit} placeholder="Nhập tin nhắn..." bordered={false} autoComplete='off'/>
+                                    </Form.Item>
+                                    <Button onClick={handleOnSubmit}>Gửi</Button>
+                                </FormStyled>
+                            </ContentStyled>
+                        </>
+                    ) : <Alert message={"Hãy chọn phòng"} type={"info"} showIcon style={{margin: '5px'}} closable />
+                }
+            </WrapperStyled>
     )
 }
 

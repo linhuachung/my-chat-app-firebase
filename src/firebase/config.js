@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, FacebookAuthProvider, getAdditionalUserInfo  } from "firebase/auth";
-import { getFirestore, addDoc, collection } from "firebase/firestore";
+import { getAuth, signInWithPopup, FacebookAuthProvider, getAdditionalUserInfo, connectAuthEmulator  } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import {addDocument, generateKeywords} from "./services";
 
 
 const firebaseConfig = {
@@ -17,18 +18,26 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore(app);
+
+connectAuthEmulator(auth,'http://localhost:9099')
+
+if(window.location.hostname === 'localhost'){
+    connectFirestoreEmulator(db, 'localhost', 8080);
+}
 const fbProvider = new FacebookAuthProvider()
 const SignInWithPopup = async () => {
     const result =  await signInWithPopup(auth, fbProvider)
     const additionalUserInfo = await getAdditionalUserInfo(result)
     if(additionalUserInfo?.isNewUser){
-        await addDoc(collection(db, "users"), {
+        await addDocument("users", {
             displayName: result?.user.displayName,
             email: result?.user.email,
             photoURL: result?.user.photoURL,
             uid: result?.user.uid,
-            provider: result?.providerId
-        });
+            provider: result?.providerId,
+            keywords: generateKeywords(result?.user.displayName?.toLowerCase())
+        } )
+
     }
 }
 export {auth, db , fbProvider, SignInWithPopup}
