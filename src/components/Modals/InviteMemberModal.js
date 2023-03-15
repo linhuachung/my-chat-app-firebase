@@ -37,16 +37,22 @@ function DebounceSelect({fetchOptions, debounceTimeout = 300, curMembers, ...pro
         };
     }, []);
 
+    const handleSelect = (e) => {
+        console.log(e)
+    }
+
     return (
         <Select
             labelInValue
             filterOption={false}
             onSearch={debounceFetcher}
             notFoundContent={fetching ? <Spin size='small'/> : null}
+            name={'select-member'}
+            onChange={handleSelect}
             {...props}
         >
             {options?.map((opt) => (
-                <Select.Option key={opt.value} value={opt.value} title={opt.label}>
+                <Select.Option key={opt.value} value={opt.value} title={opt.label}  >
                     <Avatar size='small' src={opt.photoURL}>
                         {opt.photoURL ? '' : opt.label?.charAt(0)?.toUpperCase()}
                     </Avatar>
@@ -78,18 +84,16 @@ function InviteMemberModal() {
 
     const [form] = Form.useForm()
     const handleOK = async () => {
-
         form.resetFields()
-
         await updateDoc(doc(db, 'rooms', selectedRoomId), {
             members: [...selectedRoom.members, ...value.map(val => val.value)]
         })
-
         setIsInviteMemberVisible(false)
     }
     const handleCancel = () => {
         form.resetFields()
         setIsInviteMemberVisible(false)
+        setValue([])
     }
 
     return (
@@ -100,6 +104,7 @@ function InviteMemberModal() {
                 onOk={handleOK}
                 onCancel={handleCancel}
             >
+                <Form layout='vertical'>
                 <DebounceSelect
                     mode='multiple'
                     name='search-user'
@@ -111,6 +116,7 @@ function InviteMemberModal() {
                     style={{ width: '100%' }}
                     curMembers={selectedRoom?.members}
                 />
+                </Form>
             </Modal>
         </div>
     )
