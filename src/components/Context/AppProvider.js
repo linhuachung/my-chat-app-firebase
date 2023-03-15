@@ -17,7 +17,6 @@ function AppProvider({children}) {
             compareValue: uid
         }
     }, [uid])
-
     const rooms = useFirestore('rooms', roomsCondition)
     const selectedRoom = useMemo(() => rooms.find(room => room.id === selectedRoomId), [rooms, selectedRoomId])
 
